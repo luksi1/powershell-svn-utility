@@ -1,58 +1,51 @@
+# if the content in a file contains a certain character, rename it with our suffix
 function Rename-SvnFileContent {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory,ValueFromPipelineByPropertyName,ValueFromPipeline)]
-        [string] $Name,
+        [string] $FullName,
         [hashtable] $Characters = @{"å" = "a"; "ä" = "a";"ö" = "o"},
-        [string] $Repo = "http://foo/svn/testrepo",
         [string] $Svn = "C:\Program Files\TortoiseSVN\bin\svn.exe",
         [string] $Suffix = "1"
     )
 
     Process {
-        $content = Get-Content $Name
-        $content | ForEach-Object {
+        $i = 0
+         (Get-Content $FullName) | % {
             $line = $_
-            $Characters.Keys | ForEach-Object {
-                $line -replace $Characters.Item($_)
+            $Characters.Keys | % {
+		if ($line -match "$_") { $i = 1 }
+                $line -replace $_, $Characters.Item($_) | Set-Content $FullName
             }
-            Set-Content $FileName
-        }
-        Write-Output "$Svn rename $Name ${Name}${Suffix}"
-        # & $Svn rename $Name ${Name}${Suffix}
+	} 
+	
+	if ($i -eq 1) {
+	        Write-Output "$Svn rename $FullName ${FullName}${Suffix}"
+        	# & $Svn rename $FullName ${FullName}${Suffix}
+	}
     }
 
 }
 
+# If a filename contains a certain character, change it, and run svn rename
 function Rename-SvnFile {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory,ValueFromPipelineByPropertyName,ValueFromPipeline)]
         [string] $Name,
         [hashtable] $Characters = @{"å" = "a"; "ä" = "a";"ö" = "o"},
-        [string] $Repo = "http://foo/svn/testrepo",
         [string] $Svn = "C:\Program Files\TortoiseSVN\bin\svn.exe",
-        [string] $Suffix = "1"
-        
+        [string] $Suffix = "1"        
     )
 
     Process {
-        $encoding = [system.Text.Encoding]::UTF8
-        $originalName = $Name
         foreach ($char in $Characters.Keys) {
-            Write-Output $encoding.GetBytes($Name)
-            Write-Output "å"
-            Write-Output $char
-            Write-Output $Characters.Item($char)
             if ($Name -match $char) {
-                Write-Output $char
-                $Name -replace $Characters.Item($char)
-                Write-Output "svn rename $OriginalName $Name"
+                $newName = $Name -replace $char, $Characters.Item($char)
+                Write-Output "$Svn rename $Name $newName"
+		# & $Svn rename $Name $newName
             }
         }
     }
 
 }
-
-
-
